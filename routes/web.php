@@ -58,6 +58,4 @@ Route::middleware('auth')->prefix('profile')->group(function () {
 });
 
 
-Route::post('/midtrans/callback', [DonationController::class, 'midtransCallback'])->name('midtrans.callback');
-
 require __DIR__.'/auth.php';
