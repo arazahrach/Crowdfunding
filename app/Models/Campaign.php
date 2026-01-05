@@ -29,6 +29,27 @@ class Campaign extends Model
         return $this->belongsTo(\App\Models\Category::class, 'category_id');
     }
 
-    
+    public function getRouteKeyName(): string
+
+{
+    return 'slug';
+}
+
+protected $fillable = [
+    'user_id','category_id',
+    'title','short_title','slug','goal',
+    'description','usage_details',
+    'village','district','city','province',
+    'image','target_amount','collected_amount',
+    'end_date','is_active','status'
+];
+
+public function user()
+{
+    return $this->belongsTo(\App\Models\User::class);
+}
+
+
+
 
 }

@@ -31,15 +31,16 @@ Route::prefix('donation')->group(function () {
 });
 
 // Fundraising: wajib login
-Route::middleware('auth')->prefix('fundraising')->group(function () {
-    Route::get('/', [FundraisingController::class, 'index'])->name('fundraising.index');
-    Route::get('/create', [FundraisingController::class, 'create'])->name('fundraising.create');
-    Route::post('/', [FundraisingController::class, 'store'])->name('fundraising.store');
+Route::middleware('auth')->prefix('fundraising')->name('fundraising.')->group(function () {
+    Route::get('/', [FundraisingController::class, 'index'])->name('index');
+    Route::get('/create', [FundraisingController::class, 'create'])->name('create');
+    Route::post('/', [FundraisingController::class, 'store'])->name('store');
 
-    Route::get('/{slug}', [FundraisingController::class, 'show'])->name('fundraising.show');
-    Route::get('/{slug}/edit', [FundraisingController::class, 'edit'])->name('fundraising.edit');
-    Route::put('/{slug}', [FundraisingController::class, 'update'])->name('fundraising.update');
+    Route::get('/{campaign:slug}', [FundraisingController::class, 'show'])->name('show');
+    Route::get('/{campaign:slug}/edit', [FundraisingController::class, 'edit'])->name('edit');
+    Route::put('/{campaign:slug}', [FundraisingController::class, 'update'])->name('update');
 });
+
 
 // Profile: wajib login
 Route::middleware('auth')->get('/profile', [ProfileController::class, 'index'])->name('profile.index');

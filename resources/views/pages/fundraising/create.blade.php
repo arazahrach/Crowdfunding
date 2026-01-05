@@ -15,12 +15,9 @@
     </h1>
 
     <div class="mt-6 rounded-2xl bg-[#F7F9FC] border border-slate-200 px-8 py-8">
-        <form action="#" method="POST" enctype="multipart/form-data" class="space-y-5">
-            {{-- NOTES BACKEND
-            action="{{ route('fundraising.store') }}"
-            method POST
-            auth required
-            --}}
+       <form action="{{ route('fundraising.store') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+            @csrf
+
 
             {{-- JUDUL --}}
             <div>
@@ -131,12 +128,11 @@
             </div>
 
             {{-- SUBMIT --}}
-            <div class="pt-4 flex justify-center">
-                <button type="button"
-                        class="rounded-full bg-teal-700 px-10 py-2 text-sm font-semibold text-white hover:bg-teal-800">
-                    Simpan
-                </button>
-            </div>
+            <button type="submit"
+                    class="rounded-full bg-teal-700 px-10 py-2 text-sm font-semibold text-white hover:bg-teal-800">
+            Simpan
+            </button>
+
 
             {{-- NOTES --}}
             {{--
