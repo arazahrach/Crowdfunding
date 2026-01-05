@@ -5,6 +5,11 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\FundraisingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminCategoryController;
+use App\Http\Controllers\Admin\AdminCampaignController;
+use App\Http\Controllers\Admin\AdminDonationController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::view('/about', 'pages.about.index')->name('about');
@@ -57,5 +62,29 @@ Route::middleware('auth')->prefix('profile')->group(function () {
     Route::get('/donations', [ProfileController::class, 'donations'])->name('profile.donations');
 });
 
+Route::prefix('admin')->group(function () {
+    // login admin
+    Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
+    Route::post('/login', [AdminAuthController::class, 'login'])->name('admin.login.post');
+    Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
+
+    // admin panel (protected)
+    Route::middleware('admin')->group(function () {
+        Route::get('/', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+
+
+        Route::resource('categories', AdminCategoryController::class)
+            ->names('admin.categories');
+
+        Route::get('campaigns', [AdminCampaignController::class, 'index'])->name('admin.campaigns.index');
+        Route::get('campaigns/{campaign}', [AdminCampaignController::class, 'show'])->name('admin.campaigns.show');
+
+        Route::post('campaigns/{campaign}/approve', [AdminCampaignController::class, 'approve'])->name('admin.campaigns.approve');
+        Route::post('campaigns/{campaign}/end', [AdminCampaignController::class, 'end'])->name('admin.campaigns.end');
+
+        Route::get('donations', [AdminDonationController::class, 'index'])->name('admin.donations.index');
+        Route::get('donations/{donation}', [AdminDonationController::class, 'show'])->name('admin.donations.show');
+    });
+});
 
 require __DIR__.'/auth.php';

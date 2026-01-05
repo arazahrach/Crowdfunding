@@ -53,5 +53,4 @@ class Campaign extends Model
         return $this->hasMany(Update::class);
     }
 
-
 }

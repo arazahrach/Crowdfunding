@@ -24,4 +24,10 @@ class CategorySeeder extends Seeder
             );
         }
     }
+
+    public function campaigns()
+    {
+        return $this->hasMany(\App\Models\Campaign::class);
+    }
+
 }
