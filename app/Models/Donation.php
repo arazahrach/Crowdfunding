@@ -3,32 +3,51 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Donation extends Model
 {
-    protected $table = 'donations';
-
-    protected $casts = [
-        'midtrans_response' => 'array',
-        'is_anonymous' => 'boolean',
-    ];
-
     protected $fillable = [
         'campaign_id',
         'user_id',
-        'name','email','phone',
+        'name',
+        'email',
+        'phone',
         'amount',
-        'status',
-        'payment_method',
-        'transaction_id',
-        'snap_token',
-        'midtrans_response',
-        'is_anonymous',
         'message',
+        'is_anonymous',
+        'status',
+        'payment_ref',
+        'order_id',
+        'snap_token',
+        'payment_type',
+        'transaction_status',
+        'fraud_status',
+        'raw_response',
+
     ];
 
-    public function campaign()
+    protected $casts = [
+        'amount' => 'integer',
+        'is_anonymous' => 'boolean',
+        'raw_response' => 'array',
+
+    ];
+
+    public function campaign(): BelongsTo
     {
-        return $this->belongsTo(Campaign::class, 'campaign_id');
+        return $this->belongsTo(Campaign::class);
     }
+    
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function scopePaid($query)
+    {
+        return $query->where('status', 'paid');
+    }
+
 }

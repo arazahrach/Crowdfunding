@@ -8,35 +8,37 @@
 <div class="max-w-6xl mx-auto px-4 md:px-0 py-6">
   <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-slate-800">Donasi</h1>
-      <p class="mt-1 text-sm text-slate-500">Pilih penggalangan dana yang ingin kamu bantu.</p>
+      <h1 class="text-2xl font-bold text-slate-800">Cari Penggalangan Dana</h1>
+      <p class="mt-1 text-sm text-slate-500">Temukan campaign berdasarkan kategori, target, dan urutan yang kamu mau.</p>
     </div>
-
-    <form method="GET" action="{{ route('donation.index') }}" class="flex gap-2">
-      <input
-        name="q"
-        value="{{ $q ?? '' }}"
-        placeholder="Cari penggalangan dana..."
-        class="w-full md:w-80 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200"
-      >
-      <button class="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">
-        Cari
-      </button>
-    </form>
   </div>
 
-  <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  @include('pages.donation.search')
+
+  {{-- RESULT META --}}
+  <div class="mt-5 flex items-center justify-between">
+    <div class="text-sm text-slate-600">
+      Menampilkan <span class="font-semibold">{{ $campaigns->count() }}</span> dari
+      <span class="font-semibold">{{ $campaigns->total() }}</span> campaign
+      @if(!empty($q)) • untuk “<span class="font-semibold">{{ $q }}</span>” @endif
+    </div>
+  </div>
+
+  {{-- GRID --}}
+  <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     @forelse ($campaigns as $c)
       @php
         $target = (int) ($c->target_amount ?? 0);
-        $collected = (int) ($c->collected_amount ?? 0);
+
+        $collected = (int) ($c->collected_sum ?? 0);
+
         $p = $target > 0 ? min(100, (int) round(($collected / $target) * 100)) : 0;
 
-        $img = $c->image ?? null;
-        if (!$img) $img = 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1400&q=80';
-
-        $location = $c->location_city ?? $c->location_province ?? $c->location ?? 'Indonesia';
+        $img = $c->image ?: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1400&q=80';
+        $location = $c->city ?? $c->province ?? 'Indonesia';
         $slugOrId = $c->slug ?? $c->id;
+
+        $catName = optional($c->category)->name;
       @endphp
 
       <a href="{{ route('donation.show', $slugOrId) }}"
@@ -47,8 +49,16 @@
         </div>
 
         <div class="p-4">
-          <div class="text-sm font-semibold text-slate-800 line-clamp-2">
-            {{ $c->title }}
+          <div class="flex items-start justify-between gap-2">
+            <div class="text-sm font-semibold text-slate-800 line-clamp-2">
+              {{ $c->title }}
+            </div>
+
+            @if($catName)
+              <span class="shrink-0 rounded-full bg-teal-50 text-teal-800 px-3 py-1 text-[11px] font-semibold">
+                {{ $catName }}
+              </span>
+            @endif
           </div>
 
           <div class="mt-2 text-xs text-slate-500">{{ $location }}</div>
@@ -81,7 +91,7 @@
       </a>
     @empty
       <div class="text-sm text-slate-500">
-        Belum ada penggalangan dana. Login lalu buat “Galang Dana” dulu 😄
+        Tidak ada campaign yang cocok. Coba ganti kata kunci.
       </div>
     @endforelse
   </div>

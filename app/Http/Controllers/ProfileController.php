@@ -2,59 +2,59 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Http\RedirectResponse;
+use App\Models\Campaign;
+use App\Models\Donation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
-    public function edit(Request $request): View
+    public function index()
     {
-        return view('profile.edit', [
-            'user' => $request->user(),
-        ]);
+        // default masuk tab galang donasi saya
+        return redirect()->route('profile.fundraising');
     }
 
-    /**
-     * Update the user's profile information.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    // Tab 1: Galang Donasi Saya (campaign milik user)
+    public function fundraising(Request $request)
     {
-        $request->user()->fill($request->validated());
+        $q = trim((string) $request->query('q', ''));
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $query = Campaign::query()
+            ->where('user_id', auth()->id())
+            ->with(['category'])
+            ->withSum(['donations as collected_sum' => function ($q) {
+                $q->where('status', 'paid');
+            }], 'amount')
+            ->latest();
+
+        if ($q !== '') {
+            $query->where('title', 'like', "%{$q}%");
         }
 
-        $request->user()->save();
+        $campaigns = $query->paginate(8)->withQueryString();
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        return view('pages.profile.index', [
+            'tab' => 'fundraising',
+            'q' => $q,
+            'campaigns' => $campaigns,
+            'donations' => null,
+        ]);
     }
 
-    /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
+    // Tab 2: Riwayat Donasi (donation yang user lakukan)
+    public function donations(Request $request)
     {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
+        $donations = Donation::query()
+            ->where('user_id', auth()->id())
+            ->with(['campaign'])
+            ->latest()
+            ->paginate(10);
+
+        return view('pages.profile.index', [
+            'tab' => 'donations',
+            'q' => null,
+            'campaigns' => null,
+            'donations' => $donations,
         ]);
-
-        $user = $request->user();
-
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
     }
 }

@@ -3,243 +3,221 @@
 namespace App\Http\Controllers;
 
 use App\Models\Campaign;
+use App\Models\Category;
 use App\Models\Donation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
+use App\Services\MidtransService;
+
 
 class DonationController extends Controller
 {
+    // /donasi (list + filter)
     public function index(Request $request)
-        {
-            $q        = trim((string) $request->query('q', ''));
-            $category = trim((string) $request->query('category', '')); // slug
-            $sort     = trim((string) $request->query('sort', 'newest'));
-            $min      = $request->query('min');
-            $max      = $request->query('max');
+    {
+        $q = trim((string) $request->query('q', ''));
+        $category = $request->query('category', 'all'); // all | id | slug
+        $sort = $request->query('sort', 'newest');      // newest|oldest|target_high|target_low
+        $min = $request->query('min');
+        $max = $request->query('max');
 
-            // whitelist sort biar gak aneh
-            $allowedSort = ['newest', 'ending', 'collected', 'target', 'popular'];
-            if (!in_array($sort, $allowedSort, true)) {
-                $sort = 'newest';
-            }
+     
 
-            $query = Campaign::query()
-                ->when($this->hasColumn('campaigns', 'is_active'), fn($qq) => $qq->where('is_active', true))
-                ->when($this->hasColumn('campaigns', 'category_id'), fn($qq) => $qq->with('category')); // eager load
+        $query = Campaign::query()
+            ->with(['category'])
+            ->withSum(['donations as collected_sum' => function ($q) {
+                $q->where('status', 'paid');
+            }], 'amount')
+            ->where('status', 'active');
 
-            if ($q !== '' && $this->hasColumn('campaigns', 'title')) {
-                $query->where('title', 'like', "%{$q}%");
-            }
 
-            // ✅ Filter kategori (jalan kalau category_id ada)
-            if ($category !== '' && $this->hasColumn('campaigns', 'category_id')) {
-                $query->whereHas('category', function ($qq) use ($category) {
-                    $qq->where('slug', $category);
-                });
-            }
-
-            // range target
-            if (is_numeric($min) && $this->hasColumn('campaigns', 'target_amount')) {
-                $query->where('target_amount', '>=', (int) $min);
-            }
-            if (is_numeric($max) && $this->hasColumn('campaigns', 'target_amount')) {
-                $query->where('target_amount', '<=', (int) $max);
-            }
-
-            switch ($sort) {
-                case 'ending':
-                    // sort mendesak (end_date paling dekat, yang lewat taruh bawah, null paling bawah)
-                    if ($this->hasColumn('campaigns', 'end_date')) {
-                        $query->orderByRaw("
-                            CASE
-                                WHEN end_date IS NULL THEN 2
-                                WHEN end_date < NOW() THEN 1
-                                ELSE 0
-                            END ASC,
-                            end_date ASC
-                        ");
-                    } else {
-                        $query->latest();
-                    }
-                    break;
-
-                case 'collected':
-                    $this->hasColumn('campaigns', 'collected_amount')
-                        ? $query->orderByDesc('collected_amount')
-                        : $query->latest();
-                    break;
-
-                case 'target':
-                    $this->hasColumn('campaigns', 'target_amount')
-                        ? $query->orderByDesc('target_amount')
-                        : $query->latest();
-                    break;
-
-                case 'popular':
-                    $query->withCount(['donations as paid_donations_count' => function ($qq) {
-                        if ($this->hasColumn('donations', 'status')) {
-                            $qq->where('status', 'paid');
-                        }
-                    }])->orderByDesc('paid_donations_count');
-                    break;
-
-                case 'newest':
-                default:
-                    $query->latest();
-                    break;
-            }
-
-            $campaigns = $query->paginate(12)->withQueryString();
-
-            // kategori list untuk filter bar
-            $categories = collect();
-            try {
-                $categories = \App\Models\Category::query()->orderBy('name')->get(['name','slug']);
-            } catch (\Throwable $e) {
-                $categories = collect([
-                    (object)['name'=>'Fasilitas','slug'=>'fasilitas'],
-                    (object)['name'=>'Beasiswa','slug'=>'beasiswa'],
-                    (object)['name'=>'Alat Belajar','slug'=>'alat-belajar'],
-                    (object)['name'=>'Tingkat Sekolah','slug'=>'tingkat-sekolah'],
-                ]);
-            }
-
-            return view('pages.donation.search', compact('campaigns', 'categories', 'q', 'category', 'sort', 'min', 'max'));
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('title', 'like', "%{$q}%")
+                    ->orWhere('short_title', 'like', "%{$q}%")
+                    ->orWhere('purpose', 'like', "%{$q}%");
+            });
         }
 
+        if ($category !== 'all' && $category !== '') {
+            $query->where(function ($sub) use ($category) {
+                if (ctype_digit((string) $category)) {
+                    $sub->where('category_id', (int) $category);
+                } else {
+                    $sub->whereHas('category', fn ($c) => $c->where('slug', $category));
+                }
+            });
+        }
 
+        if ($min !== null && $min !== '') $query->where('target_amount', '>=', (int) $min);
+        if ($max !== null && $max !== '') $query->where('target_amount', '<=', (int) $max);
+
+        switch ($sort) {
+            case 'ending':
+                $query->orderBy('end_date', 'asc');
+                break;
+            case 'popular':
+                $query->withCount(['donations as donors_count' => function ($q) {
+                    $q->where('status', 'paid');
+                }])->orderBy('donors_count', 'desc');
+                break;
+            case 'collected':
+                $query->orderBy('collected_sum', 'desc');
+                break;
+            case 'target':
+                $query->orderBy('target_amount', 'desc');
+                break;
+            case 'newest':
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+}
+
+
+        $campaigns = $query->paginate(9)->withQueryString();
+        $categories = Category::orderBy('name')->get();
+
+        return view('pages.donation.index', compact(
+            'campaigns',
+            'categories',
+            'q',
+            'category',
+            'sort',
+            'min',
+            'max'
+        ));
+    }
+
+    // /donation/{slug} (detail)
     public function show(string $slug)
     {
-        $campaign = $this->findCampaignBySlug($slug);
+        $campaign = Campaign::with(['user', 'category'])
+            ->where('slug', $slug)
+            ->firstOrFail();
 
-        // hitung donors dari donations yang paid (kalau ada status)
-        $donors = Donation::query()
-            ->where('campaign_id', $campaign->id)
-            ->when($this->hasColumn('donations', 'status'), fn($q) => $q->where('status', 'paid'))
-            ->count();
+        // ✅ otomatis konsisten: SUM dari donations paid
+        $collected = (int) $campaign->donations()->paid()->sum('amount');
+        $donors    = (int) $campaign->donations()->paid()->count();
 
-        $daysLeft = $campaign->end_date
-            ? max(0, now()->startOfDay()->diffInDays($campaign->end_date, false))
-            : null;
-
-        return view('pages.donation.show', compact('campaign', 'donors', 'daysLeft', 'slug'));
-    }
-
-    public function updates(string $slug)
-    {
-        $campaign = $this->findCampaignBySlug($slug);
-
-        $updates = $campaign->updates()
-            ->latest()
-            ->get();
-
-        return view('pages.donation.updates', compact('campaign', 'updates', 'slug'));
-    }
-
-    public function donateForm(string $slug)
-    {
-        $campaign = $this->findCampaignBySlug($slug);
-        return view('pages.donation.donate', compact('campaign', 'slug'));
-    }
-
-    public function donateStore(Request $request, string $slug)
-    {
-        $campaign = $this->findCampaignBySlug($slug);
-
-        $data = $request->validate([
-            'amount' => ['required','integer','min:10000'],
-            'name'   => ['nullable','string','max:100'],
-            'email'  => ['nullable','email','max:120'],
-            'phone'  => ['nullable','string','max:30'],
-            'is_anonymous' => ['nullable','boolean'],
-            'message' => ['nullable','string','max:255'],
-        ]);
-
-        // kalau user login, isi name/email dari user (opsional)
-        if ($request->user()) {
-            $data['user_id'] = $request->user()->id;
-            $data['name'] = $data['name'] ?: $request->user()->name;
-            $data['email'] = $data['email'] ?: $request->user()->email;
+        $daysLeft = null;
+        if ($campaign->end_date) {
+            $daysLeft = now()->startOfDay()->diffInDays($campaign->end_date->startOfDay(), false);
+            if ($daysLeft < 0) $daysLeft = 0;
         }
 
-        $donation = Donation::create([
-            'campaign_id' => $campaign->id,
-            'user_id'     => $data['user_id'] ?? null,
-            'name'        => $data['name'] ?? null,
-            'email'       => $data['email'] ?? null,
-            'phone'       => $data['phone'] ?? null,
-            'amount'      => (int) $data['amount'],
-            'status'      => 'pending',
-            'is_anonymous'=> (bool) ($data['is_anonymous'] ?? false),
-            'message'     => $data['message'] ?? null,
-        ]);
-
-        // Untuk sekarang: tanpa Midtrans dulu -> simulasi sukses (buat demo cepat)
-        // NANTI: di sini kamu generate snap_token Midtrans dan return ke FE.
-        // sementara kita redirect balik ke detail + flash message
-        return redirect()
-            ->route('donation.show', $slug)
-            ->with('success', 'Donasi kamu tercatat (pending). Lanjutkan integrasi Midtrans biar bisa bayar.');
+        return view('pages.donation.show', compact('campaign', 'slug', 'donors', 'daysLeft', 'collected'));
     }
+
+    // /donation/{slug}/updates
+    public function updates(string $slug)
+    {
+        $campaign = Campaign::with(['user'])->where('slug', $slug)->firstOrFail();
+
+        $updates = $campaign->updates()->latest()->get();
+
+        // ✅ otomatis konsisten
+        $collected = (int) $campaign->donations()->paid()->sum('amount');
+
+        return view('pages.donation.updates', compact('campaign', 'slug', 'updates', 'collected'));
+    }
+
+    // /donation/{slug}/donate (form)
+    public function donateForm(string $slug)
+    {
+        $campaign = Campaign::where('slug', $slug)->firstOrFail();
+
+        // ✅ otomatis konsisten
+        $collected = (int) $campaign->donations()->paid()->sum('amount');
+
+        return view('pages.donation.donate', compact('campaign', 'slug', 'collected'));
+    }
+
+    // POST /donation/{slug}/donate (submit)
+    public function donateStore(Request $request, string $slug, MidtransService $midtrans)
+{
+    $campaign = Campaign::where('slug', $slug)->firstOrFail();
+
+    $data = $request->validate([
+        'amount' => ['required', 'integer', 'min:10000'],
+        'name' => ['nullable', 'string', 'max:255'],
+        'email' => ['nullable', 'email', 'max:255'],
+        'phone' => ['nullable', 'string', 'max:50'],
+        'message' => ['nullable', 'string', 'max:1000'],
+        'is_anonymous' => ['nullable', 'boolean'],
+    ]);
+
+    $isAnonymous = (bool) ($data['is_anonymous'] ?? false);
+
+    // 1) buat record donation dulu (pending)
+    $donation = Donation::create([
+        'campaign_id' => $campaign->id,
+        'user_id' => auth()->id(),
+        'name' => $isAnonymous ? null : ($data['name'] ?? null),
+        'email' => $data['email'] ?? null,
+        'phone' => $data['phone'] ?? null,
+        'amount' => (int) $data['amount'],
+        'message' => $data['message'] ?? null,
+        'is_anonymous' => $isAnonymous,
+        'status' => 'pending',
+        'payment_ref' => (string) Str::uuid(),
+        'order_id' => 'DON-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(6)),
+    ]);
+
+    // 2) minta snap token
+    $donation->snap_token = $midtrans->createSnapToken($donation, $campaign->title);
+    $donation->save();
+
+    // 3) tampilkan halaman payment (snap popup)
+    return view('pages.donation.payment', [
+        'campaign' => $campaign,
+        'donation' => $donation,
+    ]);
+}
 
     public function midtransCallback(Request $request)
     {
-        // placeholder dulu—nanti kita isi pas Midtrans masuk
+        $payload = $request->all();
+
+        $orderId = $payload['order_id'] ?? null;
+        $statusCode = $payload['status_code'] ?? null;
+        $grossAmount = $payload['gross_amount'] ?? null;
+        $signatureKey = $payload['signature_key'] ?? null;
+
+        if (!$orderId || !$statusCode || !$grossAmount || !$signatureKey) {
+            return response()->json(['message' => 'Bad payload'], 400);
+        }
+
+        // ✅ signature check (Midtrans standard)
+        $serverKey = config('midtrans.server_key');
+        $expected = hash('sha512', $orderId.$statusCode.$grossAmount.$serverKey);
+
+        if (!hash_equals($expected, $signatureKey)) {
+            return response()->json(['message' => 'Invalid signature'], 401);
+        }
+
+        $donation = Donation::where('order_id', $orderId)->first();
+        if (!$donation) return response()->json(['message' => 'Donation not found'], 404);
+
+        $transactionStatus = $payload['transaction_status'] ?? null;
+        $paymentType = $payload['payment_type'] ?? null;
+        $fraudStatus = $payload['fraud_status'] ?? null;
+
+        $newStatus = 'pending';
+        if (in_array($transactionStatus, ['capture', 'settlement'], true)) {
+            $newStatus = 'paid';
+        } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire', 'failure'], true)) {
+            $newStatus = 'failed';
+        }
+
+        $donation->update([
+            'status' => $newStatus,
+            'transaction_status' => $transactionStatus,
+            'payment_type' => $paymentType,
+            'fraud_status' => $fraudStatus,
+            'raw_response' => $payload,
+        ]);
+
         return response()->json(['ok' => true]);
     }
 
-    // ===== helpers =====
-
-    private function findCampaignBySlug(string $slug): Campaign
-    {
-        // kalau kolom slug ada, pakai slug
-        if ($this->hasColumn('campaigns', 'slug')) {
-            $c = Campaign::query()
-                ->where('slug', $slug)
-                ->first();
-
-            if ($c) return $c;
-        }
-
-        // fallback: kalau belum ada slug, coba cari by id
-        if (ctype_digit($slug)) {
-            return Campaign::findOrFail((int) $slug);
-        }
-
-        // fallback terakhir: cari title mirip slug
-        if ($this->hasColumn('campaigns', 'title')) {
-            $candidates = Campaign::query()->get();
-            foreach ($candidates as $c) {
-                if (Str::slug($c->title) === $slug) return $c;
-            }
-        }
-
-        abort(404);
-    }
-
-    private function hasColumn(string $table, string $col): bool
-    {
-        static $cache = [];
-        $key = "{$table}.{$col}";
-        if (array_key_exists($key, $cache)) return $cache[$key];
-
-        try {
-            $columns = \Schema::getColumnListing($table);
-            return $cache[$key] = in_array($col, $columns, true);
-        } catch (\Throwable $e) {
-            return $cache[$key] = false;
-        }
-    }
-
-    public function imgUrl(?string $path): string
-    {
-        if (!$path) {
-            return 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1400&q=80';
-        }
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-        return Storage::url($path);
-    }
 }

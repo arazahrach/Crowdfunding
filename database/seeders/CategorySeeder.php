@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use App\Models\Category;
 use Illuminate\Support\Str;
 
 class CategorySeeder extends Seeder
@@ -11,22 +11,16 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         $items = [
-            ['name' => 'Fasilitas',       'icon' => '🏫'],
-            ['name' => 'Beasiswa',        'icon' => '🎓'],
-            ['name' => 'Alat Belajar',    'icon' => '✏️'],
-            ['name' => 'Tingkat Sekolah', 'icon' => '🧭'],
+            ['name' => 'Alat Belajar',     'icon' => 'pencil'],
+            ['name' => 'Beasiswa',        'icon' => 'graduation-cap'],
+            ['name' => 'Fasilitas',       'icon' => 'building'],
+            ['name' => 'Tingkat Sekolah', 'icon' => 'school'],
         ];
 
         foreach ($items as $it) {
-            DB::table('categories')->updateOrInsert(
+            Category::updateOrCreate(
                 ['slug' => Str::slug($it['name'])],
-                [
-                    'name' => $it['name'],
-                    'slug' => Str::slug($it['name']),
-                    'icon' => $it['icon'],
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]
+                ['name' => $it['name'], 'icon' => $it['icon']]
             );
         }
     }

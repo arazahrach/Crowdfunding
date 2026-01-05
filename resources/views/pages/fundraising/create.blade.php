@@ -1,147 +1,122 @@
-
-
-@extends('layouts.app', ['title' => 'Galang Dana'])
+@extends('layouts.app')
 
 @section('content')
-<div class="max-w-3xl mx-auto">
-    {{-- Back --}}
-    <a href="{{ route('home') }}"
-       class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-teal-700 text-white hover:bg-teal-800">
-        ←
-    </a>
+<div class="min-h-screen bg-[#F6F2E8]">
+  <div class="max-w-md mx-auto px-4 py-6">
 
-    <h1 class="mt-4 text-center text-lg font-semibold text-teal-700">
-        Galang Dana
-    </h1>
-
-    <div class="mt-6 rounded-2xl bg-[#F7F9FC] border border-slate-200 px-8 py-8">
-       <form action="{{ route('fundraising.store') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
-            @csrf
-
-
-            {{-- JUDUL --}}
-            <div>
-                <label class="text-xs font-semibold text-slate-600">
-                    Judul / Nama Donasi
-                </label>
-                <input type="text"
-                       placeholder="Contoh: Renovasi Ruang Kelas SD Negeri Harapan Jaya"
-                       class="mt-2 w-full rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
-            </div>
-
-            {{-- TUJUAN --}}
-            <div>
-                <label class="text-xs font-semibold text-slate-600">
-                    Tujuan Penggalangan
-                </label>
-                <input type="text"
-                       placeholder="Contoh: Renovasi ruang kelas rusak akibat banjir"
-                       class="mt-2 w-full rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
-            </div>
-
-            {{-- LOKASI --}}
-            <div>
-                <label class="text-xs font-semibold text-slate-600">
-                    Lokasi
-                </label>
-
-                <div class="mt-2 grid grid-cols-2 gap-3">
-                    <input type="text" placeholder="Desa"
-                           class="rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
-                    <input type="text" placeholder="Kecamatan"
-                           class="rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
-                    <input type="text" placeholder="Kabupaten/Kota"
-                           class="rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
-                    <input type="text" placeholder="Provinsi"
-                           class="rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
-                </div>
-            </div>
-
-            {{-- TARGET DANA --}}
-            <div>
-                <label class="text-xs font-semibold text-slate-600">
-                    Target Dana
-                </label>
-                <div class="mt-2 flex items-center rounded-xl border border-teal-300 bg-white px-4 py-2">
-                    <span class="text-sm font-semibold text-slate-600 mr-2">Rp</span>
-                    <input type="number" placeholder="0"
-                           class="w-full text-sm outline-none">
-                </div>
-            </div>
-
-            {{-- PERIODE --}}
-            <div>
-                <label class="text-xs font-semibold text-slate-600">
-                    Periode
-                </label>
-
-                <div class="mt-2 grid grid-cols-2 gap-3">
-                    <button type="button"
-                        class="rounded-xl border border-teal-300 bg-white py-2 text-sm hover:bg-teal-50">
-                        30 Hari
-                    </button>
-                    <button type="button"
-                        class="rounded-xl border border-teal-300 bg-white py-2 text-sm hover:bg-teal-50">
-                        60 Hari
-                    </button>
-                    <button type="button"
-                        class="rounded-xl border border-teal-300 bg-white py-2 text-sm hover:bg-teal-50">
-                        90 Hari
-                    </button>
-                    <select
-                        class="rounded-xl border border-teal-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
-                        <option>Pilih Hari</option>
-                    </select>
-                </div>
-            </div>
-
-            {{-- JUDUL & DESKRIPSI (DIPISAH 2 KOLOM SESUAI REQUEST) --}}
-            <div class="grid gap-4 md:grid-cols-2">
-                <div>
-                    <label class="text-xs font-semibold text-slate-600">
-                        Judul Singkat
-                    </label>
-                    <input type="text"
-                           placeholder="Judul singkat penggalangan"
-                           class="mt-2 w-full rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
-                </div>
-
-                <div>
-                    <label class="text-xs font-semibold text-slate-600">
-                        Rincian Penggunaan Dana
-                    </label>
-                    <textarea rows="4"
-                              placeholder="Jelaskan penggunaan dana secara rinci"
-                              class="mt-2 w-full rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200"></textarea>
-                </div>
-            </div>
-
-            {{-- FOTO --}}
-            <div>
-                <label class="text-xs font-semibold text-slate-600">
-                    Tambahkan Foto
-                </label>
-                <div class="mt-2 rounded-xl border border-dashed border-teal-300 bg-white p-6 text-center">
-                    <div class="text-sm font-semibold text-teal-700">Upload</div>
-                    <input type="file" class="mt-3 text-xs">
-                </div>
-            </div>
-
-            {{-- SUBMIT --}}
-            <button type="submit"
-                    class="rounded-full bg-teal-700 px-10 py-2 text-sm font-semibold text-white hover:bg-teal-800">
-            Simpan
-            </button>
-
-
-            {{-- NOTES --}}
-            {{--
-            BACKEND NANTI:
-            - campaigns table
-            - status default: pending
-            - foto ke storage
-            --}}
-        </form>
+    <div class="mb-4 flex items-center gap-3">
+      <a href="{{ route('fundraising.index') }}"
+         class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-teal-700 text-white hover:bg-teal-800">←</a>
+      <h1 class="text-lg font-bold text-slate-800">Galang Dana</h1>
     </div>
+
+    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+      <form method="POST" action="{{ route('fundraising.store') }}" enctype="multipart/form-data" class="space-y-4">
+        @csrf
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Judul / Nama Donasi</label>
+          <input name="title" value="{{ old('title') }}"
+                 class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
+          @error('title') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Tujuan Penggalangan</label>
+          <input name="purpose" value="{{ old('purpose') }}"
+                 class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
+          @error('purpose') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-600">Desa</label>
+            <input name="village" value="{{ old('village') }}"
+                   class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-600">Kecamatan</label>
+            <input name="district" value="{{ old('district') }}"
+                   class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-600">Kabupaten/Kota</label>
+            <input name="city" value="{{ old('city') }}"
+                   class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-600">Provinsi</label>
+            <input name="province" value="{{ old('province') }}"
+                   class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Kategori</label>
+          <select name="category_id"
+                  class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
+            <option value="">(Opsional) Pilih kategori</option>
+            @foreach(($categories ?? collect()) as $cat)
+              <option value="{{ $cat->id }}" {{ (string)old('category_id') === (string)$cat->id ? 'selected' : '' }}>
+                {{ $cat->name }}
+              </option>
+            @endforeach
+          </select>
+          @error('category_id') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Target Dana</label>
+          <input name="target_amount" type="number" min="10000" value="{{ old('target_amount') }}"
+                 class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200"
+                 placeholder="contoh: 100000000">
+          @error('target_amount') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Periode (Hari)</label>
+          <select name="period_days"
+                  class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
+            @foreach([30,60,90,120] as $d)
+              <option value="{{ $d }}" {{ (string)old('period_days','30') === (string)$d ? 'selected' : '' }}>
+                {{ $d }} Hari
+              </option>
+            @endforeach
+          </select>
+          @error('period_days') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Judul Singkat (opsional)</label>
+          <input name="short_title" value="{{ old('short_title') }}"
+                 class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200">
+          @error('short_title') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Rincian Penggunaan Dana</label>
+          <textarea name="description" rows="5"
+                    class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200"
+                    placeholder="Jelaskan penggunaan dana secara rinci">{{ old('description') }}</textarea>
+          @error('description') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Tambahkan Foto (opsional)</label>
+          <input type="file" name="image"
+                 class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-white">
+          @error('image') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <button class="w-full rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">
+          Simpan
+        </button>
+      </form>
+    </div>
+
+  </div>
 </div>
 @endsection

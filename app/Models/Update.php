@@ -3,10 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Update extends Model
 {
-    protected $table = 'updates'; // sesuai blade kamu untuk halaman updates
+    protected $fillable = [
+        'campaign_id',
+        'user_id',
+        'title',
+        'content',
+        'image',
+    ];
 
-    protected $fillable = ['campaign_id', 'content', 'image'];
+    public function campaign(): BelongsTo
+    {
+        return $this->belongsTo(Campaign::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }

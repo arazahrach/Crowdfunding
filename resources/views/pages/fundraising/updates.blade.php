@@ -23,22 +23,15 @@
   <div class="max-w-md mx-auto px-4 py-6">
 
     <div class="mb-3 flex items-center justify-between">
-      <a href="{{ route('fundraising.index') }}"
+      <a href="{{ route('fundraising.show', $slug) }}"
          class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-teal-700 text-white hover:bg-teal-800">
         ←
       </a>
 
-      <div class="flex gap-2">
-        <a href="{{ route('fundraising.edit', $slug) }}"
-           class="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-slate-50">
-          Edit
-        </a>
-
-        <a href="{{ route('fundraising.updates.create', $slug) }}"
-           class="rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">
-          + Update
-        </a>
-      </div>
+      <a href="{{ route('fundraising.updates.create', $slug) }}"
+         class="rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">
+        + Update
+      </a>
     </div>
 
     <div class="rounded-2xl overflow-hidden bg-white shadow-sm border border-slate-100">
@@ -50,14 +43,8 @@
         <h1 class="text-center font-semibold text-slate-800">{{ $campaign->title }}</h1>
 
         <div class="mt-3 flex items-center justify-center gap-6 text-xs text-slate-600">
-          <div class="flex items-center gap-1">
-            <span>👥</span>
-            <span>{{ $donors ?? 0 }} Donatur</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <span>🕒</span>
-            <span>{{ is_null($daysLeft) ? '-' : $daysLeft }} Hari Tersisa</span>
-          </div>
+          <div class="flex items-center gap-1"><span>👥</span><span>{{ $donors ?? 0 }} Donatur</span></div>
+          <div class="flex items-center gap-1"><span>🕒</span><span>{{ is_null($daysLeft) ? '-' : $daysLeft }} Hari Tersisa</span></div>
         </div>
 
         <div class="mt-4">
@@ -78,57 +65,70 @@
         </div>
 
         <div class="mt-6">
-          <div class="text-center text-sm font-semibold text-teal-700">
-            Informasi Penggalangan Dana
-          </div>
+          <div class="text-center text-sm font-semibold text-teal-700">Informasi Penggalangan Dana</div>
 
           <div class="mt-3 rounded-2xl border border-slate-200 p-4">
             <div class="text-xs text-slate-500">Penggalang Dana</div>
             <div class="mt-1 flex items-center gap-2">
-              <div class="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">
-                👤
-              </div>
+              <div class="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">👤</div>
               <div class="font-semibold text-slate-800">{{ $organizer }}</div>
               <span class="text-teal-700 text-xs">✔</span>
             </div>
 
+            {{-- tabs --}}
             <div class="mt-4 flex rounded-xl bg-slate-100 p-1">
-              {{-- tab deskripsi --}}
               <a href="{{ route('fundraising.show', $slug) }}"
-                 class="flex-1 text-center text-sm font-semibold rounded-lg py-2 bg-teal-700 text-white">
+                 class="flex-1 text-center text-sm font-semibold rounded-lg py-2 text-slate-700 hover:bg-white">
                 Deskripsi
               </a>
-
-              {{-- tab update --}}
               <a href="{{ route('fundraising.updates', $slug) }}"
-                class="flex-1 text-center text-sm font-semibold rounded-lg py-2 text-slate-700 hover:bg-white">
+                 class="flex-1 text-center text-sm font-semibold rounded-lg py-2 bg-teal-700 text-white">
                 Update
               </a>
-
-
-            <div class="mt-4 text-sm text-slate-700 leading-relaxed">
-              {!! nl2br(e($campaign->description ?? 'Belum ada deskripsi.')) !!}
             </div>
 
-            <div class="mt-4 text-xs text-slate-500">
-              Lokasi:
-              {{ $campaign->village ? $campaign->village.', ' : '' }}
-              {{ $campaign->district ? $campaign->district.', ' : '' }}
-              {{ $campaign->city ? $campaign->city.', ' : '' }}
-              {{ $campaign->province ?? '' }}
+            {{-- list updates --}}
+            <div class="mt-4 space-y-4">
+              @forelse ($updates as $u)
+                <div class="rounded-xl border border-slate-200 bg-white p-3">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="text-sm font-semibold text-slate-800">
+                      {{ $u->title ?: 'Update' }}
+                    </div>
+                    <div class="text-[11px] text-slate-500">
+                      {{ optional($u->created_at)->format('d M Y') }}
+                    </div>
+                  </div>
+
+                  <div class="mt-2 text-sm text-slate-700 leading-relaxed">
+                    {!! nl2br(e($u->content)) !!}
+                  </div>
+
+                  @if (!empty($u->image))
+                    <div class="mt-3 rounded-xl overflow-hidden border border-slate-200">
+                      <img class="w-full h-48 object-cover" src="{{ $u->image }}" alt="">
+                    </div>
+                  @endif
+                </div>
+              @empty
+                <div class="text-sm text-slate-500">
+                  Belum ada update. Klik tombol “+ Update” untuk menambahkan.
+                </div>
+              @endforelse
             </div>
+
           </div>
         </div>
 
         <div class="mt-5 flex items-center justify-center gap-3">
-          <a href="{{ route('donation.show', $slug) }}"
-             class="rounded-full border border-slate-200 px-6 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-            Lihat sebagai Publik
+          <a href="{{ route('fundraising.edit', $slug) }}"
+             class="rounded-full border border-slate-200 px-6 py-2 text-sm font-semibold text-teal-700 hover:bg-slate-50">
+            Edit
           </a>
 
-          <a href="{{ route('fundraising.edit', $slug) }}"
+          <a href="{{ route('fundraising.updates.create', $slug) }}"
              class="rounded-full bg-teal-700 px-6 py-2 text-sm font-semibold text-white hover:bg-teal-800">
-            Edit Galang Dana
+            + Update
           </a>
         </div>
 

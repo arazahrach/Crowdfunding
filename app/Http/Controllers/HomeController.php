@@ -4,91 +4,71 @@ namespace App\Http\Controllers;
 
 use App\Models\Campaign;
 use App\Models\Category;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
     public function index()
     {
-        // 1) HERO SLIDES
-        // Kalau kamu belum punya tabel hero_slides, kita generate dari campaign terbaru (atau fallback dummy)
-        $slides = Campaign::query()
-            ->where('is_active', true)
-            ->latest()
-            ->take(5)
-            ->get(['id', 'title', 'description', 'image', 'slug'])
-            ->map(function ($c) {
-                return [
-                    'title' => $this->nl2($c->title, 22),
-                    'subtitle' => $c->description ? $this->trimWords($c->description, 14) : 'Mari bantu bersama',
-                    'image' => $this->imgUrl($c->image),
-                    'link'  => $c->slug
-                        ? route('donation.show', $c->slug)
-                        : '#', // kalau slug belum ada
-                ];
-            })
-            ->values()
-            ->toArray();
+        // 1) Categories untuk section kategori
+        $categories = Category::query()
+            ->orderBy('name')
+            ->get();
 
-        if (count($slides) === 0) {
-            // fallback kalau DB kosong
-            $slides = [
-                [
-                    'title' => "Solidaritas Sesama\nuntuk korban Banjir\ndi Jakarta",
-                    'subtitle' => "Mari bantu saudara bangkit dari musibah",
-                    'image' => 'https://images.unsplash.com/photo-1509099836639-18ba02c6d1d8?auto=format&fit=crop&w=1600&q=60',
-                    'link'  => '#urgent',
-                ],
+        // 2) Urgent campaigns: contoh rule "mendesak" = end_date paling dekat
+        // + hitung terkumpul dari donations status=paid
+        $urgentModels = Campaign::query()
+            ->with(['category'])
+            ->withSum(['donations as collected_sum' => function ($q) {
+                $q->where('status', 'paid');
+            }], 'amount')
+            ->whereNotNull('end_date')
+            ->orderBy('end_date', 'asc')
+            ->limit(8)
+            ->get();
+
+        // Siapkan format data untuk urgent.blade.php (lebih aman karena urgent view kamu pakai array keys)
+        $urgentCampaigns = $urgentModels->map(function ($c) {
+            $target = (int) ($c->target_amount ?? 0);
+            $collected = (int) ($c->collected_sum ?? 0);
+            $progress = $target > 0 ? min(100, (int) round(($collected / $target) * 100)) : 0;
+
+            $img = $c->image ?: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1400&q=80';
+            $location = $c->city ?? $c->location_city ?? $c->province ?? $c->location_province ?? 'Indonesia';
+            $slugOrId = $c->slug ?? $c->id;
+
+            return [
+                'title' => $c->title,
+                'image' => $img,
+                'location' => $location,
+                'target' => $target,
+                'collected' => $collected,
+                'progress' => $progress,
+                'link' => route('donation.show', $slugOrId),
             ];
-        }
+        });
 
-        // 2) URGENT CAMPAIGNS (yang mendekati end_date atau yang progressnya belum penuh)
-        $urgentCampaigns = Campaign::query()
-            ->where('is_active', true)
-            ->orderByRaw('end_date is null, end_date asc') // yang ada end_date diutamakan
-            ->take(10)
-            ->get(['id', 'title', 'image', 'target_amount', 'collected_amount', 'slug'])
-            ->map(function ($c) {
-                $target = (int) ($c->target_amount ?? 0);
-                $collected = (int) ($c->collected_amount ?? 0);
-                $progress = $target > 0 ? min(100, (int) round(($collected / $target) * 100)) : 0;
-
-                return [
-                    'title' => $c->title,
-                    'location' => $c->location_city ?? $c->location_province ?? 'Indonesia', // kalau ada kolom lokasi, dia kepake
-                    'image' => $this->imgUrl($c->image),
-                    'target' => $target,
-                    'collected' => $collected,
-                    'progress' => $progress,
-                    'link' => $c->slug ? route('donation.show', $c->slug) : '#',
-                ];
-            })
-            ->values();
-
-        // 3) CATEGORIES (kalau tabel categories belum ada, fallback dummy)
-        $categories = collect();
-        if (class_exists(Category::class)) {
-            try {
-                $categories = Category::query()
-                    ->orderBy('name')
-                    ->take(4)
-                    ->get(['name', 'slug', 'icon']);
-            } catch (\Throwable $e) {
-                // ignore kalau tabel belum dimigrate
-            }
-        }
-
-        if ($categories->isEmpty()) {
-            $categories = collect([
-                (object) ['name' => 'Fasilitas', 'icon' => '🏫', 'slug' => null],
-                (object) ['name' => 'Beasiswa', 'icon' => '🎓', 'slug' => null],
-                (object) ['name' => 'Alat Belajar', 'icon' => '✏️', 'slug' => null],
-                (object) ['name' => 'Tingkat Sekolah', 'icon' => '🧭', 'slug' => null],
-            ]);
-        }
+        // 3) Slides untuk hero (bisa statis dulu, nanti bisa tarik dari campaign featured)
+        $slides = [
+            [
+                'title' => "Solidaritas Sesama\nuntuk Pendidikan",
+                'subtitle' => "Bantu sekolah, beasiswa, dan fasilitas belajar di Indonesia",
+                'image' => 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1600&q=60',
+                'link' => route('donation.index'),
+            ],
+            [
+                'title' => "Mulai Galang Dana",
+                'subtitle' => "Ajak orang lain bantu tujuan baikmu",
+                'image' => 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1600&q=60',
+                'link' => route('fundraising.create'),
+            ],
+        ];
 
         return view('pages.home.index', compact('slides', 'urgentCampaigns', 'categories'));
     }
+
+
 
     private function imgUrl(?string $path): string
     {

@@ -23,7 +23,7 @@
         {{-- Menu --}}
         <nav class="hidden md:flex items-center gap-5 text-sm">
             <a class="hover:text-teal-700" href="{{ route('donation.index') }}">Donasi</a>
-            <a class="hover:text-teal-700" href="{{ route('fundraising.create') }}">Galang Dana</a>
+            <a class="hover:text-teal-700" href="{{ route('fundraising.index') }}">Galang Dana</a>
             <a class="hover:text-teal-700" href="{{ route('about') }}">Tentang Kami</a>
         </nav>
 
