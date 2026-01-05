@@ -1,37 +1,47 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\DonationController;
+use App\Http\Controllers\FundraisingController;
+use App\Http\Controllers\ProfileController;
 
-
-Route::view('/', 'pages.home.index')->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::view('/about', 'pages.about.index')->name('about');
 
-Route::view('/login', 'pages.auth.login')->name('login');
-Route::view('/register', 'pages.auth.register')->name('register');
+
+// Auth pages (kalau kamu pakai Breeze/Jetstream biasanya ini gak perlu)
+// Route::view('/login', 'pages.auth.login')->name('login');
+// Route::view('/register', 'pages.auth.register')->name('register');
+
+// List semua campaign (public)
+Route::get('/donasi', [DonationController::class, 'index'])->name('donation.index');
+
+// Detail campaign (public) + donate + updates
 
 Route::prefix('donation')->group(function () {
-    Route::get('/{slug}', fn($slug) => view('pages.donation.show', compact('slug')))->name('donation.show');
-    Route::get('/{slug}/donate', fn($slug) => view('pages.donation.donate', compact('slug')))->name('donation.donate');
-    Route::get('/{slug}/updates', fn($slug) => view('pages.donation.updates', compact('slug')))->name('donation.updates');
-});
-Route::get('/donasi', fn() => view('pages.donation.index'))->name('donation.index');
+    Route::get('/{slug}', [DonationController::class, 'show'])->name('donation.show');
+    Route::get('/{slug}/updates', [DonationController::class, 'updates'])->name('donation.updates');
 
+    Route::get('/{slug}/donate', [DonationController::class, 'donateForm'])->name('donation.donate');
+    Route::post('/{slug}/donate', [DonationController::class, 'donateStore'])->name('donation.donate.store');
+
+    // nanti kalau sudah midtrans:
+    Route::post('/midtrans/callback', [DonationController::class, 'midtransCallback'])->name('midtrans.callback');
+});
+
+// Fundraising: wajib login
 Route::middleware('auth')->prefix('fundraising')->group(function () {
-    Route::get('/', fn() => view('pages.fundraising.index'))->name('fundraising.index');
-    Route::get('/{slug}', fn($slug) => view('pages.fundraising.show', compact('slug')))->name('fundraising.show');
-    Route::get('/{slug}/edit', fn($slug) => view('pages.fundraising.edit', compact('slug')))->name('fundraising.edit');
-});
-Route::get('/galang-dana', fn() => view('pages.fundraising.create'))->name('fundraising.create');
+    Route::get('/', [FundraisingController::class, 'index'])->name('fundraising.index');
+    Route::get('/create', [FundraisingController::class, 'create'])->name('fundraising.create');
+    Route::post('/', [FundraisingController::class, 'store'])->name('fundraising.store');
 
-Route::middleware('auth')->group(function () {
-    Route::get('/galang-dana', fn() => view('pages.fundraising.create'))
-        ->name('fundraising.create');
+    Route::get('/{slug}', [FundraisingController::class, 'show'])->name('fundraising.show');
+    Route::get('/{slug}/edit', [FundraisingController::class, 'edit'])->name('fundraising.edit');
+    Route::put('/{slug}', [FundraisingController::class, 'update'])->name('fundraising.update');
 });
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', function () {
-        return view('pages.profile.index');
-    })->name('profile.index');
-});
+// Profile: wajib login
+Route::middleware('auth')->get('/profile', [ProfileController::class, 'index'])->name('profile.index');
 
 require __DIR__.'/auth.php';

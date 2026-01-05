@@ -3,64 +3,32 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Campaign extends Model
 {
-    use HasFactory;
+    protected $table = 'campaigns';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<string>
-     */
-    protected $fillable = [
-        'title',
-        'description',
-        'image',
-        'target_amount',
-        'collected_amount',
-        'end_date',
-        'is_active',
-    ];
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
-        'end_date' => 'datetime',
-        'target_amount' => 'decimal:2',
-        'collected_amount' => 'decimal:2',
+        'is_active' => 'boolean',
+        'end_date' => 'date',
     ];
 
-    /**
-     * Get the donations for the campaign.
-     */
     public function donations()
     {
-        return $this->hasMany(Donation::class);
+        return $this->hasMany(Donation::class, 'campaign_id');
     }
 
-    /**
-     * Get the updates for the campaign.
-     */
     public function updates()
     {
-        return $this->hasMany(Update::class);
+        // kalau tabel kamu namanya "updates"
+        return $this->hasMany(Update::class, 'campaign_id');
+    }
+    
+    public function category()
+    {
+        return $this->belongsTo(\App\Models\Category::class, 'category_id');
     }
 
-    /**
-     * Get the progress percentage of collected funds.
-     *
-     * @return int
-     */
-    public function getProgressAttribute()
-    {
-        if ($this->target_amount <= 0) {
-            return 0;
-        }
-        return min(100, round(($this->collected_amount / $this->target_amount) * 100));
-    }
+    
+
 }

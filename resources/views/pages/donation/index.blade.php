@@ -1,70 +1,57 @@
-@extends('layouts.app', ['title' => 'Donasi'])
+@extends('layouts.app')
 
 @section('content')
 @php
-  // DUMMY LIST (nanti dari DB campaigns)
-  $items = [
-    [
-      'slug' => 'renovasi-kelas-harapan-jaya',
-      'title' => 'Renovasi Ruang Kelas SD Negeri Harapan Jaya',
-      'city' => 'Jakarta',
-      'image' => 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80',
-      'target' => 30000000,
-      'collected' => 15600000,
-    ],
-    [
-      'slug' => 'kursi-meja-darurat',
-      'title' => 'Pengadaan Kursi & Meja Darurat untuk Siswa Korban…',
-      'city' => 'Bekasi',
-      'image' => 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1200&q=80',
-      'target' => 20000000,
-      'collected' => 9800000,
-    ],
-    [
-      'slug' => 'bangun-ulang-ruang-kelas',
-      'title' => 'Pembangunan Ulang Ruang Kelas yang Rusak Akibat…',
-      'city' => 'Bogor',
-      'image' => 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=80',
-      'target' => 45000000,
-      'collected' => 22500000,
-    ],
-  ];
-
-  function rupiah($n){ return 'Rp '.number_format($n,0,',','.'); }
+  function rupiah($n){ return 'Rp '.number_format((int)$n,0,',','.'); }
 @endphp
 
-<div class="max-w-6xl mx-auto">
-  <div class="flex items-end justify-between gap-4">
+<div class="max-w-6xl mx-auto px-4 md:px-0 py-6">
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Donasi</h1>
       <p class="mt-1 text-sm text-slate-500">Pilih penggalangan dana yang ingin kamu bantu.</p>
     </div>
 
-    <a href="{{ route('home') }}"
-       class="text-sm font-semibold text-teal-700 hover:underline">
-      Kembali ke Beranda
-    </a>
+    <form method="GET" action="{{ route('donation.index') }}" class="flex gap-2">
+      <input
+        name="q"
+        value="{{ $q ?? '' }}"
+        placeholder="Cari penggalangan dana..."
+        class="w-full md:w-80 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-200"
+      >
+      <button class="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">
+        Cari
+      </button>
+    </form>
   </div>
 
   <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    @foreach ($items as $it)
+    @forelse ($campaigns as $c)
       @php
-        $p = min(100, round($it['collected'] / $it['target'] * 100));
+        $target = (int) ($c->target_amount ?? 0);
+        $collected = (int) ($c->collected_amount ?? 0);
+        $p = $target > 0 ? min(100, (int) round(($collected / $target) * 100)) : 0;
+
+        $img = $c->image ?? null;
+        if (!$img) $img = 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1400&q=80';
+
+        $location = $c->location_city ?? $c->location_province ?? $c->location ?? 'Indonesia';
+        $slugOrId = $c->slug ?? $c->id;
       @endphp
 
-      <a href="{{ route('donation.show', $it['slug']) }}"
+      <a href="{{ route('donation.show', $slugOrId) }}"
          class="group rounded-2xl bg-white border border-slate-200 overflow-hidden hover:shadow-sm transition">
         <div class="aspect-[16/10] overflow-hidden">
-          <img src="{{ $it['image'] }}" alt=""
+          <img src="{{ $img }}" alt="{{ $c->title }}"
                class="h-full w-full object-cover group-hover:scale-[1.02] transition">
         </div>
 
         <div class="p-4">
           <div class="text-sm font-semibold text-slate-800 line-clamp-2">
-            {{ $it['title'] }}
+            {{ $c->title }}
           </div>
 
-          <div class="mt-2 text-xs text-slate-500">{{ $it['city'] }}</div>
+          <div class="mt-2 text-xs text-slate-500">{{ $location }}</div>
 
           <div class="mt-4">
             <div class="h-2 rounded-full bg-slate-200 overflow-hidden">
@@ -77,8 +64,8 @@
             </div>
 
             <div class="mt-1 flex items-center justify-between text-xs text-slate-600">
-              <span>{{ rupiah($it['collected']) }}</span>
-              <span>dari {{ rupiah($it['target']) }}</span>
+              <span>{{ rupiah($collected) }}</span>
+              <span>dari {{ rupiah($target) }}</span>
             </div>
           </div>
 
@@ -86,20 +73,21 @@
             <span class="inline-flex rounded-full bg-teal-50 text-teal-800 px-3 py-1 text-xs font-semibold">
               Donasi
             </span>
-
             <span class="text-xs font-semibold text-teal-700 group-hover:underline">
               Lihat Detail →
             </span>
           </div>
         </div>
       </a>
-    @endforeach
+    @empty
+      <div class="text-sm text-slate-500">
+        Belum ada penggalangan dana. Login lalu buat “Galang Dana” dulu 😄
+      </div>
+    @endforelse
   </div>
 
-  {{-- NOTES (DB nanti)
-  - items dari table campaigns
-  - slug bisa dari title (Str::slug)
-  - image bisa dari storage atau url
-  --}}
+  <div class="mt-6">
+    {{ $campaigns->links() }}
+  </div>
 </div>
 @endsection

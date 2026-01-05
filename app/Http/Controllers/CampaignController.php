@@ -44,10 +44,22 @@ class CampaignController extends Controller
     }
 
     public function destroy($id)
-    {
-        $campaign = Campaign::findOrFail($id);
-        $campaign->is_active = false;
-        $campaign->save();
-        return response()->json(['message' => 'Campaign closed']);
-    }
+        {
+            $campaign = Campaign::findOrFail($id);
+            $campaign->is_active = false;
+            $campaign->save();
+            return response()->json(['message' => 'Campaign closed']);
+        }
+
+        
+    public function category()
+        {
+            return $this->belongsTo(\App\Models\Category::class, 'category_id');
+        }
+
+    public function donations()
+        {
+            return $this->hasMany(\App\Models\Donation::class, 'campaign_id');
+        }
+
 }
