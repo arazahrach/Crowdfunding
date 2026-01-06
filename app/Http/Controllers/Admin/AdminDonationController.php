@@ -40,4 +40,13 @@ class AdminDonationController extends Controller
 
         return view('admin.donations.show', compact('donation'));
     }
+    
+    public function destroy(Donation $donation)
+    {
+        $donation->delete();
+
+        return redirect()->route('admin.donations.index')
+            ->with('success', 'Donasi berhasil dihapus.');
+    }
+
 }

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('content')
 @php
@@ -14,11 +14,22 @@
         <p class="mt-1 text-sm text-slate-500">{{ $donation->order_id }}</p>
       </div>
 
-      <a href="{{ route('admin.donations.index') }}"
-         class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-        ← Kembali
-      </a>
-    </div>
+      <div class="flex items-center gap-2">
+        <a href="{{ route('admin.donations.index') }}"
+            class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            ← Kembali
+        </a>
+
+        <form method="POST" action="{{ route('admin.donations.destroy', $donation) }}"
+                onsubmit="return confirm('Hapus data donasi ini? Tindakan tidak bisa dibatalkan.')">
+            @csrf
+            @method('DELETE')
+            <button class="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">
+            Hapus Donasi
+            </button>
+        </form>
+        </div>
+
 
     <div class="mt-4 grid gap-4 md:grid-cols-12">
       <div class="md:col-span-6 rounded-2xl border border-slate-200 bg-white p-5">

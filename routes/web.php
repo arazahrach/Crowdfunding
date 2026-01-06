@@ -84,6 +84,10 @@ Route::prefix('admin')->group(function () {
 
         Route::get('donations', [AdminDonationController::class, 'index'])->name('admin.donations.index');
         Route::get('donations/{donation}', [AdminDonationController::class, 'show'])->name('admin.donations.show');
+
+        Route::delete('donations/{donation}', [AdminDonationController::class, 'destroy'])
+        ->name('admin.donations.destroy');
+
     });
 });
 
